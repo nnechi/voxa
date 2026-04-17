@@ -18,5 +18,11 @@ class LRS2Dataset(Dataset):
     
 
     def __getitem__(self,idx): 
-        return self.samples[idx]; 
+        sample = self.samples[idx]; 
+
+        with open(sample.txt, "r", encoding="utf-8") as f: 
+            transcript = f.read().strip().lower(); 
+
+        return sample.mp4, transcript; 
+
         
