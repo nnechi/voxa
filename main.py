@@ -11,18 +11,7 @@ TEST_PATH = "/home/nnechi/Code/Python/489/Project/test"
 
 
 
-def normalize(text : str) -> str: 
-    text = text.lower().strip(); 
-    text = " ".join(text.split()); 
-    return text; 
 
-def encode(text : str, char_to_idx: dict[str,int]) -> list[int]: 
-    text = normalize(text); 
-    encoded = []; 
-
-    for c in text: 
-        encoded.append(char_to_idx[c]); 
-    return encoded; 
 
 
 #greedy ctc decode (remove dups.)
@@ -56,25 +45,9 @@ def main():
     # print(train.__len__()); 
     # print(test.__len__()); 
 
-    #create a vocab. 
-
-    chars = "abcdefghijklmnopqrstuvwxyz0123456789 '"; 
-     
-    char_to_int = {}; 
-    int_to_char = {}; 
-
-    char_to_int["<blank>"] = 0; 
-    int_to_char[0] = "<blank>"; 
-    #generate char_to_int, int_to_char mappings. 
-
-    i = 1; 
-    for c in chars: 
-        char_to_int[c] = i; 
-        int_to_char[i] = c; 
-        i+=1; 
 
 
-    vocab_size = len(char_to_int);
+
     
 
     
