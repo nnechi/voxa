@@ -3,45 +3,29 @@ import torch
 import torchaudio
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
-
-
-
-
-
-
 class LRS2Dataset(Dataset):
 
 
     """samples will be the mp4 and txt transcript matches."""
     """pair class"""
-    def __init__(self, samples):
-        self.samples = samples; # sample objects.     #create a vocab. 
-
-        self.chars = "abcdefghijklmnopqrstuvwxyz0123456789 '"; 
-        
-        self.char_to_int = {}; 
-        self.int_to_char = {}; 
-
-        self.char_to_int["<blank>"] = 0; 
-        self.int_to_char[0] = "<blank>"; 
-        #generate char_to_int, int_to_char mappings. 
-
-        i = 1; 
-        for c in self.chars: 
-            self.char_to_int[c] = i; 
-            self.int_to_char[i] = c; 
-            i+=1; 
-
-
-        self.vocab_size = len(self.char_to_int);
+    def __init__(self, samples, char_to_int):
+        self.samples = samples; # sample objects.  
+        self.char_to_int = char_to_int; #encoding 
+        self.vocab_size = len(self.char_to_int); #number of encodings. 
     
         self.target_sample_rate = 16000; 
+    
+        self.mel = torchaudio.transforms.MelSpectrogram(
+            sample_rate = self.target_sample_rate, 
+            n_mels = 80
+        ); 
+    
 
     
     def __len__(self): 
         return len(self.samples); 
 
-    def __getvocab__(self): 
+    def get_vocab_size(self): 
         return self.vocab_size; 
 
     def normalize(self, text : str) -> str: 
@@ -75,7 +59,7 @@ class LRS2Dataset(Dataset):
         with open(sample.txt, "r", encoding = "utf-8") as f: 
             transcript = " ".join(f.read().strip().lower().split()); 
         
-        encoded_label = self.encode(transcript); #switch transcript to label form. 
+        encoded_label = self.encode(transcript, self.char_to_int); #switch transcript to label form. 
         labels = torch.tensor(encoded_label, dtype = torch.long); 
 
         return features, labels, transcript, sample.id; 
@@ -87,7 +71,7 @@ class LRS2Dataset(Dataset):
 #create the batches. need to get every single video to the same length. 
 
 def collate_fn(batch):
-    features, labels, transcripts = zip(*batch); 
+    features, labels, transcripts, sample_ids = zip(*batch); 
     
     input_len = torch.tensor([feature.size(1) for feature in features], dtype = torch.long); 
     target_len = torch.tensor([label.size(0) for label in labels], dtype = torch.long); 
@@ -100,7 +84,7 @@ def collate_fn(batch):
 
     flat_labels = torch.cat(labels); 
 
-    return padded_features, flat_labels, input_len, target_len, transcripts; 
+    return padded_features, flat_labels, input_len, target_len, transcripts, sample_ids; 
 
 
 

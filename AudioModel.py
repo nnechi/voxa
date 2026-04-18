@@ -12,12 +12,12 @@ class AudioModel(nn.Module):
         self.cnn = nn.Sequential(
                 nn.Conv2d(in_channels=1, out_channels = 64, kernel_size = 3, padding = 1), 
                 nn.ReLU(), 
-                nn.MaxPool2d(kernel_size=2), 
+                nn.MaxPool2d(kernel_size=(1,2)), # pool frequency, not time. 
 
 
                 nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, padding = 1), 
                 nn.ReLU(), 
-                nn.MaxPool2d(kernel_size=2)
+                nn.MaxPool2d(kernel_size=(1,2))
             )
         
         out_size = 128 * (spec_bins // 4); 
@@ -33,7 +33,6 @@ class AudioModel(nn.Module):
 #final classification on vocab label size. 
         self.classifier = nn.Linear(hidden_dim * 2, vocab_size); 
 
-
     def forward(self,x): 
         x = self.cnn(x); 
         batch_size, channels, time_steps, freq_bins = x.size(); 
@@ -47,7 +46,7 @@ class AudioModel(nn.Module):
 
 class VideoAudioModel(nn.Module): 
     def __init__(self): 
-        super.__init__(); 
+        super().__init__(); 
     
 
         
