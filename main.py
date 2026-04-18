@@ -79,6 +79,21 @@ def main():
     print(transcripts[0]); 
     print(sample_ids[0]); 
 
+    features = features.to(device);
+    labels = labels.to(device); 
+    input_len = input_len.to(device); 
+    target_len = target_len.to(device); 
+    
+
+
+    logits = model(features); 
+    print(logits.shape); 
+
+    probabilities = logits.log_softmax(dim = -1); 
+    probabilities = probabilities.permute(1,0,2); 
+    loss = criterion(probabilities, labels, input_len, target_len); 
+    print(loss.item()); 
+
     
 
 
