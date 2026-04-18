@@ -19,7 +19,6 @@ class LRS2Dataset(Dataset):
             sample_rate = self.target_sample_rate, 
             n_mels = 80
         ); 
-    
 
     
     def __len__(self): 
@@ -30,6 +29,13 @@ class LRS2Dataset(Dataset):
 
     def normalize(self, text : str) -> str: 
         text = text.lower().strip(); 
+
+        if text.startswith("text:"): 
+            text = text[len("text:"):].strip(); 
+        
+        if "conf:" in text: 
+            text = text.split("conf:")[0].strip(); 
+        
         text = " ".join(text.split()); 
         return text; 
 
@@ -57,7 +63,7 @@ class LRS2Dataset(Dataset):
         features = features.transpose(1,2); 
 
         with open(sample.txt, "r", encoding = "utf-8") as f: 
-            transcript = " ".join(f.read().strip().lower().split()); 
+            transcript = self.normalize(" ".join(f.read().strip().lower().split())); 
         
         encoded_label = self.encode(transcript, self.char_to_int); #switch transcript to label form. 
         labels = torch.tensor(encoded_label, dtype = torch.long); 

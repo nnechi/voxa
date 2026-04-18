@@ -1,7 +1,7 @@
 import torch 
 
 #greedy ctc decode (remove dups.)
-def decode(encoded : list[int], idx_to_         : dict[int, str]) -> str: 
+def decode(encoded : list[int], idx_to_char: dict[int, str]) -> str: 
     decoded = []; 
     prev = "";
 
