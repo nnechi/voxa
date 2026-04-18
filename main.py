@@ -5,6 +5,7 @@ from sample import build_samples
 from AudioModel import AudioModel, VideoAudioModel 
 from torch.utils.data import DataLoader
 import torch.nn as nn
+import torch 
 
 
 TRAIN_PATH = "/home/nnechi/Code/Python/489/Project/train"
@@ -41,12 +42,29 @@ def main():
     train = LRS2Dataset(train_samples, char_to_int); 
     test = LRS2Dataset(test_samples, char_to_int); 
 
+    pretrain_loader = DataLoader(pretrain, batch_size = 8, shuffle = True, collate_fn = collate_fn); 
+    train_loader = DataLoader(train, batch_size =8, shuffle = True, collate_fn = collate_fn); 
+    test_loader = DataLoader(test, batch_size=8, shuffle = False, collate_fn = collate_fn); 
+
+
+    model = AudioModel(spec_bins = 80, hidden_dim = 256, layers=2, vocab_size = len(char_to_int)); 
+
+    #########SPECS#############
+
+    criterion = nn.CTCLoss(blank = 0, zero_infinity= True);
+    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3); 
+
 
     print(pretrain.__len__()); 
     print(train.__len__()); 
     print(test.__len__()); 
 
-    criterion = nn.CTCLoss(blank = 0, zero_infinity= True);
+
+
+
+
+
+    
 
 
 
