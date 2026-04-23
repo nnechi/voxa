@@ -1,4 +1,6 @@
 import torch 
+from torchaudio.models.decoder import ctc_decoder 
+
 
 
 #greedy ctc decode (remove dups.)
@@ -14,6 +16,20 @@ def decode(encoded : list[int], idx_to_char: dict[int, str]) -> str:
         
 
     return "".join(decoded); 
+
+#CTC BEAM DECODE : 
+def beam_decode(logit, decoder) -> list[str]: 
+    probabilities = logit.log_softmax(dim = -1).detach().cpu().unsqueeze(0); 
+    results = decoder(probabilities); 
+
+    h = results[0][0]; 
+    text = "".join(decoder.idxs_to_tokens(h.tokens)); 
+    text = text.replace("<blank>", ""); 
+    text = " ".join(text.split()); 
+
+    return text; 
+
+
 
 
 #train loop. 
@@ -76,11 +92,12 @@ def val_one_epoch(model, loader, criterion, device, testing = False):
 
 @torch.no_grad() 
 
-def test_one_epoch(model, loader, criterion, device, int_to_char): 
+def test_one_epoch(model, loader, criterion, device, int_to_char,decoder=None): 
     model.eval(); 
     total_loss = 0.0; 
     
-    with open ("audio_test_predictions.txt", "w", encoding="utf-8") as out: 
+    output_path = "audio_predictions.txt" if not decoder else "audio_beam_predictions.txt"
+    with open (output_path, "w", encoding="utf-8") as out: 
         for batch in loader: 
             features, labels, input_len, target_len, transcripts, sample_ids = batch; 
             features = features.to(device); 
@@ -97,7 +114,10 @@ def test_one_epoch(model, loader, criterion, device, int_to_char):
 
             for i in range(predicted.size(0)): 
             
-                predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
+                if decoder is None: 
+                    predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
+                else: 
+                    predicted_text = beam_decode(logits[i], decoder); 
                 out.write(f"Transcript: {transcripts[i]}\n"); 
                 out.write(f"Predicted Text: {predicted_text}\n"); 
                 out.write(f"\n"); 
@@ -175,12 +195,13 @@ def val_one_epoch_video(model, loader, criterion, device):
 
 @torch.no_grad() 
 
-def test_one_epoch_video(model, loader, criterion, device, int_to_char): 
+def test_one_epoch_video(model, loader, criterion, device, int_to_char, decoder = None): 
     model.eval(); 
     total_loss = 0.0; 
     
 
-    with open ("audio_video_test_predictions.txt", "w" , encoding = "utf-8") as out: 
+    output_path = "audio_video_model_predictions.txt" if not decoder else "audio_video_beam_predictions.txt"; 
+    with open (output_path, "w" , encoding = "utf-8") as out: 
         for batch in loader: 
             audio, video, labels, input_len, target_len, transcripts, sample_ids = batch; 
             audio = audio.to(device); 
@@ -201,13 +222,17 @@ def test_one_epoch_video(model, loader, criterion, device, int_to_char):
         
 
             for i in range(predicted.size(0)): 
-                predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
+                if decoder is None: 
+                    predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
+                else : 
+                    predicted_text = beam_decode(logits[i], decoder);        
                 out.write(f"Transcript: {transcripts[i]}\n"); 
                 out.write(f"Predicted Text: {predicted_text}\n"); 
                 out.write(f"\n"); 
-        
 
-        return total_loss/len(loader); 
+    
+
+    return total_loss/len(loader); 
 
 
 

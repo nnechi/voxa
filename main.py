@@ -9,6 +9,7 @@ import torch
 from train import train_one_epoch, val_one_epoch, test_one_epoch, train_one_epoch_video, test_one_epoch_video, val_one_epoch_video
 
 
+
 TRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/train"
 PRETRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/pretrain"
 VAL_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/val"
@@ -63,7 +64,7 @@ def __init__(video = False):
     return  train_loader, test_loader, val_loader; 
 
 
-def audio_proc(): 
+def audio_proc(beam = False): 
 
     #create a vocab. 
 
@@ -139,15 +140,31 @@ def audio_proc():
 
     model.load_state_dict(torch.load("best_audio_model.pt", map_location = device)); 
     model = model.to(device);
-    test_loss = test_one_epoch(model, test_loader, criterion, device, int_to_char); 
-    print(f"Test Loss: {test_loss:.4f}"); 
+    
+    beam_decoder = None;
+    if beam: 
+        beam_decoder = ctc_decoder(
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = None, 
+        nbest = 1, 
+        beam_size = 25, 
+        blank_token = "<blank>"
+    )
+
+
+    if beam_decoder is not None: 
+        test_loss = test_one_epoch(model, test_loader, criterion, device, int_to_char, decoder=beam_decoder); 
+        print(f"Test Loss: {test_loss:.4f}"); 
+    else: 
+        test_loss = test_one_epoch(model, test_loader, criterion, device, int_to_char); 
+        print(f"Test Loss: {test_loss:.4f}"); 
 
 
 
 
 
-
-def audio_visual_proc(): 
+def audio_visual_proc(beam = False): 
     train_loader, test_loader, val_loader = __init__(True); 
 
     model = VideoAudioModel( 
@@ -217,8 +234,24 @@ def audio_visual_proc():
     model.load_state_dict(torch.load("best_av_model.pt", map_location = device)); 
     model = model.to(device); 
     
-    test_loss = test_one_epoch_video(model, test_loader, criterion, device, int_to_char); 
-    print(f"AV Test Loss: {test_loss:.4f}"); 
+    beam_decoder = None; 
+    if beam: 
+        beam_decoder = ctc_decoder(
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = None, 
+        nbest = 1, 
+        beam_size = 25, 
+        blank_token = "<blank>"
+        )
+
+
+    if beam_decoder is not None: 
+        test_loss = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, decoder=beam_decoder); 
+        print(f"Test Loss: {test_loss:.4f}"); 
+    else: 
+        test_loss = test_one_epoch_video(model, test_loader, criterion, device, int_to_char); 
+        print(f"Test Loss: {test_loss:.4f}"); 
 
 
     
@@ -252,5 +285,5 @@ def test():
 
 
 if __name__ == "__main__": 
-    test(); 
     audio_proc(); 
+    audio_visual_proc(); 
