@@ -5,9 +5,11 @@ from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 import cv2 
 import numpy as np
+
+
+
+
 class LRS2Dataset(Dataset):
-
-
     """samples will be the mp4 and txt transcript matches."""
     """pair class"""
     def __init__(self, samples, char_to_int, video = False):
@@ -126,6 +128,8 @@ class LRS2Dataset(Dataset):
         frames = frames[:num_frames]; 
         
         return torch.stack(frames); 
+
+
 
 
 

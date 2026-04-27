@@ -1,6 +1,6 @@
 import torch 
 from torchaudio.models.decoder import ctc_decoder 
-
+from torchmetrics.text import WordErrorRate, CharErrorRate
 
 
 #greedy ctc decode (remove dups.)
@@ -18,7 +18,7 @@ def decode(encoded : list[int], idx_to_char: dict[int, str]) -> str:
     return "".join(decoded); 
 
 #CTC BEAM DECODE : 
-def beam_decode(logit, decoder) -> list[str]: 
+def beam_decode(logit, decoder): 
     probabilities = logit.log_softmax(dim = -1).detach().cpu().unsqueeze(0); 
     results = decoder(probabilities); 
 
@@ -95,7 +95,8 @@ def val_one_epoch(model, loader, criterion, device, testing = False):
 def test_one_epoch(model, loader, criterion, device, int_to_char,decoder=None): 
     model.eval(); 
     total_loss = 0.0; 
-    
+    tr = []; 
+    predictions = [];
     output_path = "audio_predictions.txt" if not decoder else "audio_beam_predictions.txt"
     with open (output_path, "w", encoding="utf-8") as out: 
         for batch in loader: 
@@ -119,10 +120,18 @@ def test_one_epoch(model, loader, criterion, device, int_to_char,decoder=None):
                 else: 
                     predicted_text = beam_decode(logits[i], decoder); 
                 out.write(f"Transcript: {transcripts[i]}\n"); 
+                tr.append(transcripts[i]);
                 out.write(f"Predicted Text: {predicted_text}\n"); 
+                predictions.append(predicted_text)
                 out.write(f"\n"); 
 
-    return total_loss/len(loader); 
+    wer = WordErrorRate(); 
+    cer = CharErrorRate(); 
+
+    w = wer(predictions, tr).item(); 
+    c = cer(predictions, tr).item(); 
+    avg_loss = total_loss/len(loader)
+    return avg_loss, w, c; 
 
 
             
@@ -197,7 +206,9 @@ def val_one_epoch_video(model, loader, criterion, device):
 
 def test_one_epoch_video(model, loader, criterion, device, int_to_char, decoder = None): 
     model.eval(); 
-    total_loss = 0.0; 
+    total_loss = 0.0;
+    tr = []; 
+    predictions = [];  
     
 
     output_path = "audio_video_model_predictions.txt" if not decoder else "audio_video_beam_predictions.txt"; 
@@ -227,12 +238,20 @@ def test_one_epoch_video(model, loader, criterion, device, int_to_char, decoder 
                 else : 
                     predicted_text = beam_decode(logits[i], decoder);        
                 out.write(f"Transcript: {transcripts[i]}\n"); 
+                tr.append(transcripts[i]); 
                 out.write(f"Predicted Text: {predicted_text}\n"); 
+                predictions.append(predicted_text); 
                 out.write(f"\n"); 
 
     
 
-    return total_loss/len(loader); 
+    wer = WordErrorRate(); 
+    cer = CharErrorRate(); 
+
+    w = wer(predictions, tr).item(); 
+    c = cer(predictions, tr).item(); 
+    avg_loss = total_loss/len(loader)
+    return avg_loss, w, c; 
 
 
 
