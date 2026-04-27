@@ -64,7 +64,7 @@ def __init__(video = False):
     return  train_loader, test_loader, val_loader; 
 
 
-def audio_proc(train_loader, val_loader, test_loader, decoder = None):  
+def train_audio(train_loader, val_loader, test_loader, decoder = None):  
 
     #create a vocab. 
     model = AudioModel(spec_bins = 80, hidden_dim = 256, layers=2, vocab_size = len(char_to_int)); 
@@ -104,30 +104,27 @@ def audio_proc(train_loader, val_loader, test_loader, decoder = None):
             break; 
     
         
-    ####TESTING#########
 
-
+def eval_audio(test_laoder, decoder = None): 
+    model = AudioModel(80, 256, 2, vocab_size = len(char_to_int)); 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
+    model = model.to(device); 
+    criterion = nn.CTCLoss(blank = 0, zero_infinity =  True); 
     model.load_state_dict(torch.load("best_audio_model.pt", map_location = device)); 
-    model = model.to(device);
+    model.eval(); 
 
+    test_loss, wer, cer = test_one_epoch(model, test_loader, criterion, device, int_to_char, decoder = decoder); 
 
-    
-
-    if beam_decoder is not None: 
-        test_loss,wer,cer = test_one_epoch(model, test_loader, criterion, device, int_to_char, decoder=beam_decoder); 
-        print(f"Test Loss: {test_loss:.4f}"); 
-        print(f"Test WER: {wer:.4f}");
-        print(f"Test CER: {cer:.4f}");
-    else: 
-        test_loss,wer,cer = test_one_epoch(model, test_loader, criterion, device, int_to_char); 
-        print(f"Test Loss: {test_loss:.4f}"); 
-        print(f"Test WER: {wer:.4f}");
-        print(f"Test CER: {cer:.4f}");
+    print(f"Test Loss: {test_loss:.4f}");
+    print(f"Test WER: {wer:.4f}");
+    print(f"Tetst CER: {cer:.4f}"); 
 
 
 
 
-def audio_visual_proc(train_loader, test_loader, val_loader, decoder = None): #
+
+
+def train_av(train_loader, val_loader,test_loader,  decoder = None): #
     
 
     model = VideoAudioModel( 
@@ -174,24 +171,23 @@ def audio_visual_proc(train_loader, test_loader, val_loader, decoder = None): #
         if epochs_no_improvement >= patience: 
             break; 
 
-    model.load_state_dict(torch.load("best_av_model.pt", map_location = device)); 
-    model = model.to(device); 
+
     
   
        
 
 
-    #Decoder Output vs. Non-Decoder Output
-    if beam_decoder is not None: 
-        test_loss, wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, decoder=beam_decoder); 
-        print(f"Test Loss: {test_loss:.4f}"); 
-        print(f"Test WER: {wer:.4f}");
-        print(f"Test CER: {cer:.4f}");
-    else: 
-        test_loss,wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char); 
-        print(f"Test Loss: {test_loss:.4f}"); 
-        print(f"Test WER: {wer:.4f}");
-        print(f"Test CER: {cer:.4f}");
+    # #Decoder Output vs. Non-Decoder Output
+    # if beam_decoder is not None: 
+    #     test_loss, wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, decoder=beam_decoder); 
+    #     print(f"Test Loss: {test_loss:.4f}"); 
+    #     print(f"Test WER: {wer:.4f}");
+    #     print(f"Test CER: {cer:.4f}");
+    # else: 
+    #     test_loss,wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char); 
+    #     print(f"Test Loss: {test_loss:.4f}"); 
+    #     print(f"Test WER: {wer:.4f}");
+    #     print(f"Test CER: {cer:.4f}");
 
 
     
@@ -225,8 +221,8 @@ def test():
 
 
 if __name__ == "__main__": 
-    train_loader, val_loader, test_loader = __init__(False);
-    train_loader_V, val_loader_V, test_loader_V = __init__(True); 
+    train_loader, test_loader, val_loader = __init__(False);
+    train_loader_V,test_loader_V,val_loader_V = __init__(True); 
 
     no_lm_decoder = ctc_decoder(
         lexicon = None, 
