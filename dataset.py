@@ -19,9 +19,9 @@ class LRS2Dataset(Dataset):
         
         self.video = video; 
         self.target_sample_rate = 16000; 
-        self.num_video_frames = 32; 
-        self.frame_height = 96; 
-        self.frame_width = 96; 
+        self.num_video_frames = 150; #grab around 6 seconds. 
+        self.frame_height = 112; 
+        self.frame_width = 112; 
     
         self.mel = torchaudio.transforms.MelSpectrogram(
             sample_rate = self.target_sample_rate, 

@@ -40,7 +40,7 @@ def build_loaders(video = False):
     test_samples = build_samples(TEST_PATH); 
     val_samples = build_samples(VAL_PATH); 
 
-    # pretrain = LRS2Dataset(pretrain_samples, char_to_int); 
+    # pretrain = LRS2Dataset(pretrain_samples, char_to_int,video); 
     train = LRS2Dataset(train_samples, char_to_int, video); 
     val = LRS2Dataset(val_samples, char_to_int, video); 
     test = LRS2Dataset(test_samples, char_to_int, video);
@@ -51,6 +51,7 @@ def build_loaders(video = False):
     print(test.__len__()); 
 
     if (video):  
+        # pretrain_loader = DataLoader(pretrain, batch_size = 8, shuffle = True, collate_fn = collate_fn_video); 
         train_loader = DataLoader(train, batch_size =8, shuffle = True, collate_fn = collate_fn_video); 
         test_loader = DataLoader(test, batch_size=8, shuffle = False, collate_fn = collate_fn_video); 
         val_loader = DataLoader(val, batch_size = 8, shuffle = False, collate_fn = collate_fn_video); 
@@ -61,25 +62,30 @@ def build_loaders(video = False):
         test_loader = DataLoader(test, batch_size=8, shuffle = False, collate_fn = collate_fn); 
         val_loader = DataLoader(val, batch_size = 8, shuffle = False, collate_fn = collate_fn); 
 
-    return  train_loader, test_loader, val_loader; 
+    return train_loader, val_loader,  test_loader; 
 
 
-def train_audio(train_loader, val_loader):  
+def train_audio(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, save_path = "best_audio_model.pt"):  
 
     #create a vocab. 
     model = AudioModel(spec_bins = 80, hidden_dim = 256, layers=2, vocab_size = len(char_to_int)); 
     #########SPECS#############
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
     model = model.to(device);
+
+    if pretrain_path is not None: 
+        model.load_state_dict(torch.load(pretrain_path, map_location = device)); 
+        print("Loaded weights."); 
+    
     criterion = nn.CTCLoss(blank = 0, zero_infinity= True);
-    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3); 
+    optimizer = torch.optim.Adam(model.parameters(), lr = lr); 
 
 
     ######TRAINING##############
 
-    epochs = 25; 
+    epochs = epochs; 
     patience = 4; 
-    delta = 0.001; 
+    delta = 0.001; # min threshold for earlystop
 
     best_loss = float("inf"); 
     epochs_no_improvement = 0; 
@@ -94,7 +100,7 @@ def train_audio(train_loader, val_loader):
         if (best_loss - val_loss) > delta: 
             best_loss = val_loss 
             epochs_no_improvement = 0; 
-            torch.save(model.state_dict(), "best_audio_model.pt"); 
+            torch.save(model.state_dict(), save_path); 
         else: 
             epochs_no_improvement += 1 
 
@@ -129,7 +135,7 @@ def eval_audio(test_loader, output_path, decoder = None):
 
 
 
-def train_av(train_loader, val_loader): #
+def train_av(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, save_path = "best_av_model.pt"): #
     
 
     model = VideoAudioModel( 
@@ -145,11 +151,16 @@ def train_av(train_loader, val_loader): #
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
     model = model.to(device);
+
+    if pretrain_path is not None: 
+        model.load_state_dict(torch.load(pretrain_path, map_location=device)); 
+        print("Loaded weights."); 
+    
     criterion = nn.CTCLoss(blank = 0, zero_infinity= True);
-    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3); 
+    optimizer = torch.optim.Adam(model.parameters(), lr = lr); 
 
 
-    epochs = 25 
+    epochs = epochs 
     patience = 4 
     delta = 0.001; 
 
@@ -168,7 +179,7 @@ def train_av(train_loader, val_loader): #
         if (best_loss - val_loss) > delta: 
             best_loss = val_loss; 
             epochs_no_improvement = 0; 
-            torch.save(model.state_dict(), "best_av_model.pt"); 
+            torch.save(model.state_dict(), save_path); 
         else: 
             epochs_no_improvement += 1; 
 
@@ -184,6 +195,7 @@ def eval_av(test_loader, output_path, decoder = None):
     model = model.to(device); 
     criterion = nn.CTCLoss(blank = 0, zero_infinity = True); 
     model.load_state_dict(torch.load("best_av_model.pt", map_location = device)); 
+    model.eval()
 
     test_loss, wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, output_path,  decoder = decoder); 
 
@@ -245,8 +257,8 @@ def test():
 
 
 if __name__ == "__main__": 
-    train_loader, test_loader, val_loader = build_loaders(False);
-    train_loader_V,test_loader_V,val_loader_V = build_loaders(True); 
+    train_loader,val_loader, test_loader = build_loaders(False);
+    train_loader_V,val_loader_V, test_loader_V = build_loaders(True); 
 
     no_lm_decoder = ctc_decoder(
         lexicon = None, 
@@ -281,9 +293,15 @@ if __name__ == "__main__":
         sil_token = " "
     )
 
-    print("Training Audio Model:")
 
-    train_audio(train_loader, val_loader); 
+    #pretrain 
+
+    # print("Pretraining Audio Model"); 
+
+    # train_audio(pretrain_loader, val_loader, 1e-3, epochs = 3, pretrain_path = None, save_path = "pretrain_model.pt");
+
+    print("Training Audio Model:")
+    train_audio(train_loader, val_loader, 1e-3, epochs = 25); 
 
     print("Evaluating Audio Model + Greedy Decode (Baseline)");
     eval_audio(test_loader, "audio_model_greedy.txt"); 
@@ -297,8 +315,13 @@ if __name__ == "__main__":
     print("Evaluating Audio Model + KenLM+Lexicon");
     eval_audio(test_loader, "audio_model_kenlm_lexicon.txt", lm_decoder_w_vocab); 
 
+
+    # print("Pretraining AV Model"); 
+
+    # train_av(pretrain_loader_V, val_loader_V, 1e-3, epochs = 3, pretrain_path = None, save_path = "pretrain_av_model.pt");
+
     print("Training Audio-Visual Model"); 
-    train_av(train_loader_V, val_loader_V); 
+    train_av(train_loader_V, val_loader_V, 1e-3, epochs = 25); 
 
     print("Evaluating AV Model + Greedy Decode (Baseline)"); 
     eval_av(test_loader_V, "av_model_greedy.txt"); 
