@@ -92,12 +92,12 @@ def val_one_epoch(model, loader, criterion, device, testing = False):
 
 @torch.no_grad() 
 
-def test_one_epoch(model, loader, criterion, device, int_to_char,decoder=None): 
+def test_one_epoch(model, loader, criterion, device, int_to_char,output_path,decoder=None): 
     model.eval(); 
     total_loss = 0.0; 
     tr = []; 
     predictions = [];
-    output_path = "audio_predictions.txt" if not decoder else "audio_beam_predictions.txt"
+    output_path = output_path
     with open (output_path, "w", encoding="utf-8") as out: 
         for batch in loader: 
             features, labels, input_len, target_len, transcripts, sample_ids = batch; 
@@ -204,14 +204,15 @@ def val_one_epoch_video(model, loader, criterion, device):
 
 @torch.no_grad() 
 
-def test_one_epoch_video(model, loader, criterion, device, int_to_char, decoder = None): 
+def test_one_epoch_video(model, loader, criterion, device, int_to_char, output_path, decoder = None): 
     model.eval(); 
     total_loss = 0.0;
     tr = []; 
     predictions = [];  
     
 
-    output_path = "audio_video_model_predictions.txt" if not decoder else "audio_video_beam_predictions.txt"; 
+    output_path = output_path; 
+
     with open (output_path, "w" , encoding = "utf-8") as out: 
         for batch in loader: 
             audio, video, labels, input_len, target_len, transcripts, sample_ids = batch; 

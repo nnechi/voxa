@@ -33,7 +33,7 @@ def create_vocab(vocab : str):
 
 char_to_int, int_to_char = create_vocab("abcdefghijklmnopqrstuvwxyz0123456789 '"); 
 
-def __init__(video = False): 
+def build_loaders(video = False): 
 
     # pretrain_samples = build_samples(PRETRAIN_PATH); 
     train_samples = build_samples(TRAIN_PATH); 
@@ -64,11 +64,10 @@ def __init__(video = False):
     return  train_loader, test_loader, val_loader; 
 
 
-def train_audio(train_loader, val_loader, test_loader, decoder = None):  
+def train_audio(train_loader, val_loader):  
 
     #create a vocab. 
     model = AudioModel(spec_bins = 80, hidden_dim = 256, layers=2, vocab_size = len(char_to_int)); 
-    beam_decoder = decoder; 
     #########SPECS#############
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
     model = model.to(device);
@@ -105,7 +104,7 @@ def train_audio(train_loader, val_loader, test_loader, decoder = None):
     
         
 
-def eval_audio(test_laoder, decoder = None): 
+def eval_audio(test_loader, output_path, decoder = None): 
     model = AudioModel(80, 256, 2, vocab_size = len(char_to_int)); 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
     model = model.to(device); 
@@ -113,18 +112,24 @@ def eval_audio(test_laoder, decoder = None):
     model.load_state_dict(torch.load("best_audio_model.pt", map_location = device)); 
     model.eval(); 
 
-    test_loss, wer, cer = test_one_epoch(model, test_loader, criterion, device, int_to_char, decoder = decoder); 
+    test_loss, wer, cer = test_one_epoch(model, test_loader, criterion, device, int_to_char, output_path, decoder = decoder); 
 
+    with open(output_path, "a", encoding = "utf-8") as f: 
+        f.write("\n")
+        f.write(f"Test Loss: {test_loss:.4f}\n"); 
+        f.write(f"Test WER: {wer:.4f}\n"); 
+        f.write(f"Test CER: {cer:.4f}\n");
+    
     print(f"Test Loss: {test_loss:.4f}");
     print(f"Test WER: {wer:.4f}");
-    print(f"Tetst CER: {cer:.4f}"); 
+    print(f"Test CER: {cer:.4f}"); 
 
 
 
 
 
 
-def train_av(train_loader, val_loader,test_loader,  decoder = None): #
+def train_av(train_loader, val_loader): #
     
 
     model = VideoAudioModel( 
@@ -135,7 +140,7 @@ def train_av(train_loader, val_loader,test_loader,  decoder = None): #
         video_feature_dim=256
     ); 
 
-    beam_decoder = decoder; 
+    
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
@@ -173,7 +178,26 @@ def train_av(train_loader, val_loader,test_loader,  decoder = None): #
 
 
     
-  
+def eval_av(test_loader, output_path, decoder = None): 
+    model = VideoAudioModel(80, 256, 2, len(char_to_int), video_feature_dim=256); 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
+    model = model.to(device); 
+    criterion = nn.CTCLoss(blank = 0, zero_infinity = True); 
+    model.load_state_dict(torch.load("best_av_model.pt", map_location = device)); 
+
+    test_loss, wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, output_path,  decoder = decoder); 
+
+    with open(output_path, "a", encoding = "utf-8") as f: 
+        f.write("\n")
+        f.write(f"Test Loss: {test_loss:.4f}\n"); 
+        f.write(f"Test WER: {wer:.4f}\n"); 
+        f.write(f"Test CER: {cer:.4f}\n");
+    
+
+    print(f"Test Loss: {test_loss:.4f}");
+    print(f"Test WER: {wer:.4f}");
+    print(f"Test CER: {cer:.4f}"); 
+
        
 
 
@@ -221,8 +245,8 @@ def test():
 
 
 if __name__ == "__main__": 
-    train_loader, test_loader, val_loader = __init__(False);
-    train_loader_V,test_loader_V,val_loader_V = __init__(True); 
+    train_loader, test_loader, val_loader = build_loaders(False);
+    train_loader_V,test_loader_V,val_loader_V = build_loaders(True); 
 
     no_lm_decoder = ctc_decoder(
         lexicon = None, 
@@ -246,7 +270,7 @@ if __name__ == "__main__":
     )
 
     lm_decoder_w_vocab = ctc_decoder(
-        lexicon = "lex.txt", 
+        lexicon = "lexicon.txt", 
         tokens = [int_to_char[i] for i in range(len(int_to_char))], 
         lm = "kenlm.bin", 
         nbest = 1, 
@@ -257,21 +281,35 @@ if __name__ == "__main__":
         sil_token = " "
     )
 
-    print("Testing Audio Procedure with Greedy Decoder"); 
-    audio_proc(train_loader, val_loader, test_loader); 
-    print("Testing Audio Procedure with non-LM Decoder"); 
-    audio_proc(train_loader, val_loader, test_loader, no_lm_decoder); 
-    print("Testing Audio Procedure with kenLM Decoder (no Lex)"); 
-    audio_proc(train_loader, val_loader, test_loader, lm_decoder); 
-    print("Testing Audio Procedure with kenLM Decoder (Lex)"); 
-    audio_proc(train_loader, val_loader, test_loader, lm_decoder_w_vocab); 
+    print("Training Audio Model:")
 
-    print("Testing AV Procedure with Greedy Decoder.");
-    audio_visual_proc(train_loader, val_loader, test_loader); 
-    print("Testing AV Procedure with non-LM Decoder");
-    audio_visual_proc(train_loader, val_loader, test_loader, no_lm_decoder); 
-    print("Testing AV Procedure with LM Decoder (no Lex)"); 
-    audio_visual_proc(train_loader, val_loader, test_loader, lm_decoder); 
-    print("Testing AV Procedure with kenLM Decoder (Lex)");
-    audio_proc(train_loader, val_loader, test_loader, lm_decoder_w_vocab); 
+    train_audio(train_loader, val_loader); 
+
+    print("Evaluating Audio Model + Greedy Decode (Baseline)");
+    eval_audio(test_loader, "audio_model_greedy.txt"); 
+
+    print("Evaluating Audio Model + Beam Decoder");
+    eval_audio(test_loader, "audio_model_beam.txt",no_lm_decoder); 
+
+    print("Evaluating Audio Model + KenLM"); 
+    eval_audio(test_loader, "audio_model_kenlm_nolexicon.txt", lm_decoder); 
+
+    print("Evaluating Audio Model + KenLM+Lexicon");
+    eval_audio(test_loader, "audio_model_kenlm_lexicon.txt", lm_decoder_w_vocab); 
+
+    print("Training Audio-Visual Model"); 
+    train_av(train_loader_V, val_loader_V); 
+
+    print("Evaluating AV Model + Greedy Decode (Baseline)"); 
+    eval_av(test_loader_V, "av_model_greedy.txt"); 
+
+    print("Evaluating AV Model + Beam Decode"); 
+    eval_av(test_loader_V, "av_model_beam.txt", no_lm_decoder); 
+
+    print("Evaluating AV Model + KenLM");
+    eval_av(test_loader_V, "av_model_kenlm_nolexicon.txt", lm_decoder); 
+
+    print("Evaluating AV Model + KenLM+Lexicon");
+    eval_av(test_loader_V, "av_model_kenlm_lexicon.txt", lm_decoder_w_vocab); 
+
 
