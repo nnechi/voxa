@@ -16,6 +16,11 @@ VAL_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/val"
 TEST_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/test"
 
 
+"""@function 
+    dataloader initialization. 
+    in : boolean for video dataset 
+    out :  train_loader, val_loader, test_loader
+"""
 def create_vocab(vocab : str): 
     char_to_int = {}; 
     int_to_char = {};   
@@ -33,6 +38,12 @@ def create_vocab(vocab : str):
 
 char_to_int, int_to_char = create_vocab("abcdefghijklmnopqrstuvwxyz0123456789 '"); 
 
+
+"""@function 
+    dataloader initialization. 
+    in : boolean for video dataset 
+    out :  train_loader, val_loader, test_loader
+"""
 def build_loaders(video = False): 
 
     # pretrain_samples = build_samples(PRETRAIN_PATH); 
@@ -64,10 +75,12 @@ def build_loaders(video = False):
 
     return train_loader, val_loader,  test_loader; 
 
-
+"""@function 
+    Train process for AudioModel
+    in : train dataset, validation dataset, learning rate, epoch counter, pretrainer path (opt), filepath for otuput
+    out :  best_audio_model.pt
+"""
 def train_audio(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, save_path = "best_audio_model.pt"):  
-
-    #create a vocab. 
     model = AudioModel(spec_bins = 80, hidden_dim = 256, layers=2, vocab_size = len(char_to_int)); 
     #########SPECS#############
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
@@ -109,7 +122,11 @@ def train_audio(train_loader, val_loader, lr, epochs = 25, pretrain_path = None,
             break; 
     
         
-
+"""@function 
+    Evaluation Process for AudioModel
+    in : Test dataset, output path, and decoder test
+    out :  CTC loss, wer, cer
+"""
 def eval_audio(test_loader, output_path, decoder = None): 
     model = AudioModel(80, 256, 2, vocab_size = len(char_to_int)); 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
@@ -133,8 +150,11 @@ def eval_audio(test_loader, output_path, decoder = None):
 
 
 
-
-
+"""@function 
+    Training process for audio_visual Model
+    in : Train dataset, val dataset, lr, epochs, pretrain, save
+    out :  best_av_model.pt
+"""
 def train_av(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, save_path = "best_av_model.pt"): #
     
 
@@ -145,8 +165,6 @@ def train_av(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, sa
         vocab_size = len(char_to_int), 
         video_feature_dim=256
     ); 
-
-    
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
@@ -188,6 +206,11 @@ def train_av(train_loader, val_loader, lr, epochs = 25, pretrain_path = None, sa
             break; 
 
 
+"""@function 
+    Training process for audio_visual Model
+    in : Train dataset, val dataset, lr, 
+    out :  CTC loss, wer, cer
+"""
     
 def eval_av(test_loader, output_path, decoder = None): 
     model = VideoAudioModel(80, 256, 2, len(char_to_int), video_feature_dim=256); 
@@ -195,7 +218,7 @@ def eval_av(test_loader, output_path, decoder = None):
     model = model.to(device); 
     criterion = nn.CTCLoss(blank = 0, zero_infinity = True); 
     model.load_state_dict(torch.load("best_av_model.pt", map_location = device)); 
-    model.eval()
+    model.eval();
 
     test_loss, wer, cer = test_one_epoch_video(model, test_loader, criterion, device, int_to_char, output_path,  decoder = decoder); 
 
@@ -229,6 +252,15 @@ def eval_av(test_loader, output_path, decoder = None):
     
 
 
+def build_test_loaders_only(): 
+    test_samples = build_samples(TEST_PATH); 
+    test = LRS2Dataset(test_samples, char_to_int, False);
+    test_v = LRS2Dataset(test_samples, char_to_int, True);
+    test_loader_V = DataLoader(test_v, batch_size=8, shuffle = False, collate_fn = collate_fn_video); 
+    test_loader = DataLoader(test, batch_size=8, shuffle = False, collate_fn = collate_fn);
+
+    return test_loader, test_loader_V
+
 
 
    
@@ -242,25 +274,39 @@ def eval_av(test_loader, output_path, decoder = None):
 
 
 
+"""@function 
+    Helper function for calling quick test cases after training. 
+    in : file_path, video bool, opt decoder
+    out :  file_path.txt
+"""
     
-
-
-def test(): 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu"); 
-
-    if (torch.cuda.is_available()): 
-        print("cuda")
+def quick_test(loader,file_path, video = False, decoder = None): 
+    if video: 
+        eval_av(loader, file_path, decoder); 
     else: 
-        print("cpu"); 
+        eval_audio(loader, file_path, decoder); 
+        
 
     
 
 
 if __name__ == "__main__": 
-    train_loader,val_loader, test_loader = build_loaders(False);
-    train_loader_V,val_loader_V, test_loader_V = build_loaders(True); 
+    # train_loader,val_loader, test_loader = build_loaders(False);
+    # train_loader_V,val_loader_V, test_loader_V = build_loaders(True);
+    # print("Training Audio Model:")
+    # train_audio(train_loader, val_loader, 1e-3, epochs = 25); 
+       #=========================================
+    # print("Training Audio-Visual Model"); 
+    # train_av(train_loader_V, val_loader_V, 1e-3, epochs = 25); 
+    #=========================================
 
-    no_lm_decoder = ctc_decoder(
+
+    test_loader, test_loader_V = build_test_loaders_only(); 
+
+    print("Evaluating Audio Model + Greedy Decode (Baseline)");
+    quick_test(test_loader, "audio_model_greedy.txt", False, None); 
+
+    no_lm_decoder_a = ctc_decoder(
         lexicon = None, 
         tokens = [int_to_char[i] for i in range (len(int_to_char))], 
         lm = None, 
@@ -269,7 +315,80 @@ if __name__ == "__main__":
         blank_token = "<blank>", sil_token=" "
     )
 
-    lm_decoder = ctc_decoder( 
+    no_lm_decoder_b = ctc_decoder(
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = None, 
+        nbest = 1, 
+        beam_size = 10, 
+        blank_token = "<blank>", sil_token=" "
+    )
+
+    no_lm_decoder_c = ctc_decoder(
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = None, 
+        nbest = 1, 
+        beam_size = 5, 
+        blank_token = "<blank>", sil_token=" "
+    )
+    print("Evaluating Audio Model + Beam Decoder (A)");
+    quick_test(test_loader,"audio_model_beam_a.txt", False, no_lm_decoder_a);
+
+    print("Evaluating Audio Model + Beam Decoder (B)");
+    quick_test(test_loader,"audio_model_beam_b.txt", False, no_lm_decoder_b); 
+
+
+    print("Evaluating Audio Model + Beam Decoder (C)");
+    quick_test(test_loader,"audio_model_beam_c.txt", False, no_lm_decoder_c); 
+
+    lm_decoder_a = ctc_decoder( 
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 0.5, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+    lm_decoder_b= ctc_decoder( 
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 0.75, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+    lm_decoder_c = ctc_decoder( 
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 1.0, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+
+    lm_decoder_d = ctc_decoder( 
+        lexicon = None, 
+        tokens = [int_to_char[i] for i in range (len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 1.5, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+
+    lm_decoder_e = ctc_decoder( 
         lexicon = None, 
         tokens = [int_to_char[i] for i in range (len(int_to_char))], 
         lm = "kenlm.bin", 
@@ -281,7 +400,48 @@ if __name__ == "__main__":
         sil_token = " "
     )
 
-    lm_decoder_w_vocab = ctc_decoder(
+
+
+    print("Evaluating Audio Model + KenLM(A)"); 
+    quick_test(test_loader, "audio_model_kenlm_nolexicon_A.txt", False, lm_decoder_a);
+
+    print("Evaluating Audio Model + KenLM(B)"); 
+    quick_test(test_loader,"audio_model_kenlm_nolexicon_B.txt", False, lm_decoder_b); 
+    
+    print("Evaluating Audio Model + KenLM(C)"); 
+    quick_test(test_loader,"audio_model_kenlm_nolexicon_C.txt", False, lm_decoder_c);
+
+    print("Evaluating Audio Model + KenLM(D)"); 
+    quick_test(test_loader,"audio_model_kenlm_nolexicon_D.txt", False, lm_decoder_d); 
+
+    print("Evaluating Audio Model + KenLM(E)"); 
+    quick_test(test_loader,"audio_model_kenlm_nolexicon_E.txt", False, lm_decoder_e); 
+
+    lm_decoder_w_vocab_a = ctc_decoder(
+        lexicon = "lexicon.txt", 
+        tokens = [int_to_char[i] for i in range(len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 1.0, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+
+    lm_decoder_w_vocab_b = ctc_decoder(
+        lexicon = "lexicon.txt", 
+        tokens = [int_to_char[i] for i in range(len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 1.5, 
+        word_score = 0.0, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+
+    lm_decoder_w_vocab_c = ctc_decoder(
         lexicon = "lexicon.txt", 
         tokens = [int_to_char[i] for i in range(len(int_to_char))], 
         lm = "kenlm.bin", 
@@ -292,47 +452,74 @@ if __name__ == "__main__":
         blank_token = "<blank>", 
         sil_token = " "
     )
+        
+    lm_decoder_w_vocab_d = ctc_decoder(
+        lexicon = "lexicon.txt", 
+        tokens = [int_to_char[i] for i in range(len(int_to_char))], 
+        lm = "kenlm.bin", 
+        nbest = 1, 
+        beam_size = 25, 
+        lm_weight = 2.0, 
+        word_score = 0.5, 
+        blank_token = "<blank>", 
+        sil_token = " "
+    )
+
+    print("Evaluating Audio Model + KenLM+Lexicon (A)");
+    quick_test(test_loader,"audio_model_kenlm_lexicon_A.txt", False, lm_decoder_w_vocab_a); 
+
+    print("Evaluating Audio Model + KenLM+Lexicon (B)");
+    quick_test(test_loader,"audio_model_kenlm_lexicon_B.txt", False, lm_decoder_w_vocab_b); 
+
+    print("Evaluating Audio Model + KenLM+Lexicon (C)");
+    quick_test(test_loader,"audio_model_kenlm_lexicon_C.txt", False, lm_decoder_w_vocab_c); 
+
+    print("Evaluating Audio Model + KenLM+Lexicon (D)");
+    quick_test(test_loader,"audio_model_kenlm_lexicon_D.txt", False, lm_decoder_w_vocab_d); 
 
 
-    #pretrain 
-
-    # print("Pretraining Audio Model"); 
-
-    # train_audio(pretrain_loader, val_loader, 1e-3, epochs = 3, pretrain_path = None, save_path = "pretrain_model.pt");
-
-    print("Training Audio Model:")
-    train_audio(train_loader, val_loader, 1e-3, epochs = 25); 
-
-    print("Evaluating Audio Model + Greedy Decode (Baseline)");
-    eval_audio(test_loader, "audio_model_greedy.txt"); 
-
-    print("Evaluating Audio Model + Beam Decoder");
-    eval_audio(test_loader, "audio_model_beam.txt",no_lm_decoder); 
-
-    print("Evaluating Audio Model + KenLM"); 
-    eval_audio(test_loader, "audio_model_kenlm_nolexicon.txt", lm_decoder); 
-
-    print("Evaluating Audio Model + KenLM+Lexicon");
-    eval_audio(test_loader, "audio_model_kenlm_lexicon.txt", lm_decoder_w_vocab); 
-
-
-    # print("Pretraining AV Model"); 
-
-    # train_av(pretrain_loader_V, val_loader_V, 1e-3, epochs = 3, pretrain_path = None, save_path = "pretrain_av_model.pt");
-
-    print("Training Audio-Visual Model"); 
-    train_av(train_loader_V, val_loader_V, 1e-3, epochs = 25); 
+ 
 
     print("Evaluating AV Model + Greedy Decode (Baseline)"); 
-    eval_av(test_loader_V, "av_model_greedy.txt"); 
+    quick_test(test_loader_V,"av_model_greedy.txt", True, None);  
 
-    print("Evaluating AV Model + Beam Decode"); 
-    eval_av(test_loader_V, "av_model_beam.txt", no_lm_decoder); 
+    print("Evaluating AV Model + Beam Decoder (A)");
+    quick_test(test_loader_V,"av_model_beam_a.txt", True, no_lm_decoder_a);
 
-    print("Evaluating AV Model + KenLM");
-    eval_av(test_loader_V, "av_model_kenlm_nolexicon.txt", lm_decoder); 
+    print("Evaluating AV Model + Beam Decoder (B)");
+    quick_test(test_loader_V,"av_model_beam_b.txt", True, no_lm_decoder_b); 
 
-    print("Evaluating AV Model + KenLM+Lexicon");
-    eval_av(test_loader_V, "av_model_kenlm_lexicon.txt", lm_decoder_w_vocab); 
+
+    print("Evaluating AV Model + Beam Decoder (C)");
+    quick_test(test_loader_V,"av_model_beam_c.txt", True, no_lm_decoder_c); 
+
+    print("Evaluating AV Model + KenLM(A)"); 
+    quick_test(test_loader_V,"av_model_kenlm_nolexicon_A.txt", True, lm_decoder_a);
+
+    print("Evaluating AV Model + KenLM(B)"); 
+    quick_test(test_loader_V,"av_model_kenlm_nolexicon_B.txt", True, lm_decoder_b); 
+    
+    print("Evaluating AV Model + KenLM(C)"); 
+    quick_test(test_loader_V,"av_model_kenlm_nolexicon_C.txt", True, lm_decoder_c);
+
+    print("Evaluating Audio Model + KenLM(D)"); 
+    quick_test(test_loader_V,"av_model_kenlm_nolexicon_D.txt", True, lm_decoder_d); 
+
+    print("Evaluating AV Model + KenLM(E)"); 
+    quick_test(test_loader_V,"av_model_kenlm_nolexicon_E.txt", True, lm_decoder_e); 
+
+
+    print("Evaluating AV Model + KenLM+Lexicon (A)");
+    quick_test(test_loader_V,"av_model_kenlm_lexicon_A.txt", True, lm_decoder_w_vocab_a); 
+
+    print("Evaluating AV Model + KenLM+Lexicon (B)");
+    quick_test(test_loader_V,"av_model_kenlm_lexicon_B.txt", True, lm_decoder_w_vocab_b); 
+
+    print("Evaluating AV Model + KenLM+Lexicon (C)");
+    quick_test(test_loader_V,"av_model_kenlm_lexicon_C.txt", True, lm_decoder_w_vocab_c); 
+
+    print("Evaluating AV Model + KenLM+Lexicon (D)");
+    quick_test(test_loader_V,"av_model_kenlm_lexicon_D.txt", True, lm_decoder_w_vocab_d); 
+
 
 

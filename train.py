@@ -18,8 +18,10 @@ def decode(encoded : list[int], idx_to_char: dict[int, str]) -> str:
     return "".join(decoded); 
 
 #CTC BEAM DECODE : 
-def beam_decode(logit, decoder): 
-    probabilities = logit.log_softmax(dim = -1).detach().cpu().unsqueeze(0); 
+def beam_decode(logit, length, decoder): 
+
+    l = int(length); #get length of the sequence
+    probabilities = logit[:l].log_softmax(dim = -1).detach().cpu().unsqueeze(0); 
     results = decoder(probabilities); 
 
     h = results[0][0]; 
@@ -118,7 +120,7 @@ def test_one_epoch(model, loader, criterion, device, int_to_char,output_path,dec
                 if decoder is None: 
                     predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
                 else: 
-                    predicted_text = beam_decode(logits[i], decoder); 
+                    predicted_text = beam_decode(logits[i], int(input_len[i].item()), decoder); 
                 out.write(f"Transcript: {transcripts[i]}\n"); 
                 tr.append(transcripts[i]);
                 out.write(f"Predicted Text: {predicted_text}\n"); 
@@ -237,7 +239,7 @@ def test_one_epoch_video(model, loader, criterion, device, int_to_char, output_p
                 if decoder is None: 
                     predicted_text = decode(predicted[i].detach().cpu().tolist(), int_to_char); 
                 else : 
-                    predicted_text = beam_decode(logits[i], decoder);        
+                    predicted_text = beam_decode(logits[i], int(input_len[i].item()), decoder);      
                 out.write(f"Transcript: {transcripts[i]}\n"); 
                 tr.append(transcripts[i]); 
                 out.write(f"Predicted Text: {predicted_text}\n"); 
