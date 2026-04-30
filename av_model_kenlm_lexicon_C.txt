@@ -2921,7 +2921,7 @@ Transcript: they love architecture
 Predicted Text: they love aratecure
 
 Transcript: rightly or wrongly
-Predicted Text: wil young
+Predicted Text: write on
 
 Transcript: i wouldn't say i'm a star
 Predicted Text: i would not say me start

@@ -12,6 +12,11 @@ class Sample:
 
 
 
+"""@function 
+        Create sample objects from given directory. (Raw samples, must be cleaned up later using helper functions in dataset. )
+        in : file root
+        out : list of samples present in the directory organized. 
+"""  
 def build_samples(root : str) -> list[Sample]: 
     root_path = Path(root); 
 

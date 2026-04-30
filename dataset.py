@@ -6,12 +6,45 @@ from torch.nn.utils.rnn import pad_sequence
 import cv2 
 import numpy as np
 
+"""@function  
+        extracts transcripts, removes unnecessary characters and metadata, then returns all lowercase version of transcript for ease of matching 
+        in : text - raw transcript label text 
+        out : text - normalized consistent text 
+    """
+def normalize(text : str) -> str: 
+    text = text.lower().strip(); 
+
+    if text.startswith("text:"): 
+        text = text[len("text:"):].strip(); 
+    
+    if "conf:" in text: 
+        text = text.split("conf:")[0].strip(); 
+    
+    text = " ".join(text.split()); 
+    return text; 
 
 
 
+"""@class 
+    Wrapper Class for Dataset
+    Methods: 
+        __len__()
+        get_vocab_size()
+        normalize()
+        encode() 
+        __getitem__() 
+        load_video_frames() 
+
+"""
 class LRS2Dataset(Dataset):
-    """samples will be the mp4 and txt transcript matches."""
-    """pair class"""
+    
+    """@constructor 
+    
+        samples - array of Sample.py objects 
+        char_to_int - encoder dictionary 
+        video - boolean flag for processing video frames. 
+
+    """
     def __init__(self, samples, char_to_int, video = False):
         self.samples = samples; # sample objects.  
         self.char_to_int = char_to_int; #encoding 
@@ -28,27 +61,28 @@ class LRS2Dataset(Dataset):
             n_mels = 80
         ); 
 
-    
+    """@function  
+        superclass override, return length of samples to be processed. 
+    """
     def __len__(self): 
         return len(self.samples); 
 
+    """@function  
+        helper for number of mappings in vocab.
+    """
     def get_vocab_size(self): 
         return self.vocab_size; 
 
-    def normalize(self, text : str) -> str: 
-        text = text.lower().strip(); 
 
-        if text.startswith("text:"): 
-            text = text[len("text:"):].strip(); 
-        
-        if "conf:" in text: 
-            text = text.split("conf:")[0].strip(); 
-        
-        text = " ".join(text.split()); 
-        return text; 
 
+
+    """@function  
+        Encoder function that takes a transcript label and converts to a list of integers 
+        in : text, char_to_idx encoder
+        out : list of integer labels 
+    """
     def encode(self, text : str, char_to_idx: dict[str,int]) -> list[int]: 
-        text = self.normalize(text); 
+        text = normalize(text); 
         encoded = []; 
         for c in text: 
             if c in char_to_idx: 
@@ -56,6 +90,12 @@ class LRS2Dataset(Dataset):
         
         return encoded; 
 
+
+    """@function 
+        Function that unpacks and organizes samples for processing. 
+        in : index of samples array. 
+        out : processed features, video_frames, labels, transcript, sample id. 
+    """
     def __getitem__(self,idx): 
         sample = self.samples[idx]; #filepath. 
         audio_file, sample_rate = torchaudio.load(sample.wav); 
@@ -67,7 +107,7 @@ class LRS2Dataset(Dataset):
             resample = torchaudio.transforms.Resample(sample_rate, self.target_sample_rate); 
             audio_file = resample(audio_file); 
         
-        features = self.mel(audio_file); 
+        features = self.mel(audio_file);  #process audio using a spectrogram
         features = features.transpose(1,2); 
 
         if (self.video): 
@@ -75,7 +115,7 @@ class LRS2Dataset(Dataset):
 
 
         with open(sample.txt, "r", encoding = "utf-8") as f: 
-            transcript = self.normalize(f.read()); 
+            transcript = normalize(f.read()); 
         
         encoded_label = self.encode(transcript, self.char_to_int); #switch transcript to label form. 
         labels = torch.tensor(encoded_label, dtype = torch.long); 
@@ -85,6 +125,13 @@ class LRS2Dataset(Dataset):
             return features, video_frames, labels, transcript, sample.id; 
         else: 
             return features, labels, transcript, sample.id; 
+
+    
+    """@function 
+        Loads video frames into a tensor format and process it. 
+        in : path of the mp4. 
+        out : tensor representing all frames in the mp4. 
+    """
 
     def load_video_frames(self, mp4_path: str) -> torch.Tensor: 
         captured_frames = cv2.VideoCapture(mp4_path); 
@@ -140,7 +187,10 @@ class LRS2Dataset(Dataset):
 
 
 
-#create the batches. need to get every single video to the same length. 
+"""@function  
+        in: batch of samples containing features, labels, transcripts, and a sample id. 
+        out : normalized features, flattened transcripts, the length of ranscript, and the sample id. 
+    """
 
 def collate_fn(batch):
     features, labels, transcripts, sample_ids = zip(*batch); 
@@ -159,6 +209,10 @@ def collate_fn(batch):
     return padded_features, flat_labels, input_len, target_len, transcripts, sample_ids; 
 
 
+"""@function  
+        in: batch of samples containing features, labels, transcripts, and a sample id. 
+        out : normalized features, flattened transcripts, the length of ranscript, and the sample id. 
+    """
 
 def collate_fn_video(batch): 
     audio_features, video_frames, labels, transcripts, sample_ids = zip(*batch); 

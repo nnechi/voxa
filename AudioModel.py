@@ -3,6 +3,34 @@ import torch.nn as nn
 import torch.nn.functional as F 
 
 
+class BaselineModel(nn.Module): 
+    def __init__(self, spec_bins, vocab_size): 
+        super().__init__(); 
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels = 64, kernel_size = 3, padding = 1), 
+            nn.ReLU(), 
+            nn.MaxPool2d(kernel_size=(1,2)), # pool frequency, not time. 
+
+
+            nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, padding = 1), 
+            nn.ReLU(), 
+            nn.MaxPool2d(kernel_size=(1,2))
+        )
+
+        out_size = 128 * (spec_bins // 4); 
+        self.classifier = nn.Linear(out_size, vocab_size); 
+
+    def forward(self, x): 
+        x = self.cnn(x); 
+        b,c,t,f = x.size(); 
+
+        x = x.permute(0,2,1,3); 
+        x = x.contiguous().view(b,t,c*f); 
+        logits = self.classifier(x); 
+        return logits; 
+
+
+
 
 class AudioModel(nn.Module): 
     def __init__(self, spec_bins, hidden_dim, layers, vocab_size): 

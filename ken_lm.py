@@ -1,17 +1,6 @@
 from sample import build_samples
 from main import TRAIN_PATH
-
-def normalize(text : str) -> str: 
-    text = text.lower().strip(); 
-
-    if text.startswith("text:"): 
-        text = text[len("text:"):].strip(); 
-    
-    if "conf:" in text: 
-        text = text.split("conf:")[0].strip(); 
-    
-    text = " ".join(text.split()); 
-    return text; 
+from dataset import normalize 
 
 
 def ken_lm(path, output_path = "l.txt"): 

@@ -3,22 +3,12 @@ import torch
 import whisper 
 from torchmetrics.text import WordErrorRate, CharErrorRate 
 from sample import build_samples 
+from dataset import normalize 
+
 
 
 TEST_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/test"
 FILE_PATH = "whisper.txt"
-
-def normalize(text : str) -> str: 
-        text = text.lower().strip(); 
-
-        if text.startswith("text:"): 
-            text = text[len("text:"):].strip(); 
-        
-        if "conf:" in text: 
-            text = text.split("conf:")[0].strip(); 
-        
-        text = " ".join(text.split()); 
-        return text; 
 
 def eval(model_name = "base.en"): 
     device = "cuda" if torch.cuda.is_available() else "cpu"; 
