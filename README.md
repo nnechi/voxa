@@ -1,66 +1,71 @@
-# A Lightweight CNN-BiLSTM Audio-Visual Pipeline 
+# Lightweight CNN-BiLSTM Audio-Visual ASR Pipeline
 
-Lightweight automatic speech recognition pipeline built using PyTorch for comparing: 
+A lightweight automatic speech recognition (ASR) experiment pipeline built with PyTorch for comparing:
 
-audio-only vs audio-visual transcription 
+- audio-only transcription
+- audio-visual transcription
+- multiple decoding strategies:
+  - greedy decoding
+  - beam search
+  - KenLM without a lexicon
+  - KenLM with a lexicon
 
-Compatibility between multiple decoding strategies: 
--greedy decoding
--beam search 
--KenLM no Lex 
--KenLM lex 
+The project uses the **LRS2** dataset and evaluates performance with:
 
-The project utilizes the LRS2 dataset and evaluates models with CTC Loss, WER, and CER metrics. 
+- **CTC Loss**
+- **WER** (Word Error Rate)
+- **CER** (Character Error Rate)
 
+---
 
-## Goal 
+## Overview
 
-The project explores whether a lightweight CNN + BiLSTM architecture provides a reproducible ASR baseline. 
+This project explores whether a lightweight **CNN + BiLSTM** architecture can provide a reproducible ASR baseline for speech transcription and subtitling.
 
-## Instructions: 
+The main experiment compares:
 
-pip install the following : 
-torch
-torchaudio
-torchmetrics
-numpy
-opencv-python 
-openai-whisper
-flashlight-text
+- **Audio-only CNN-BiLSTM**
+- **Audio-visual CNN-BiLSTM**
+- **Decoder variants**
+- **CNN-only audio baseline**
+- optional comparison against **Whisper**
 
-And run: 
-sudo apt install ffmpeg 
+---
 
-# Running the program: 
-Separate the LRS2 data into Pretrain, Train, Validation, and Test folders in order to divide samples. 
+## Features
 
-Change TRAIN_PATH, PRETRAIN_PATH, VAL_PATH, TEST_PATH to respective path folders on your system. 
+- character-level speech transcription
+- mel spectrogram audio frontend
+- optional video-frame fusion
+- CTC-based training
+- decoder comparisons using:
+  - greedy decoding
+  - CTC beam search
+  - KenLM decoding
+  - KenLM + lexicon decoding
+- transcript output logs for qualitative analysis
 
-Run python3 main.py 
+---
 
-Will produce transcript text in text files underneath: 
-audio_model_greedy.txt 
-audio_model_beam.txt 
-audio_model_kenlm_nolexicon.txt 
-audio_model_kenlm_lexicon.txt 
-av_model_greedy.txt 
-av_model_beam.txt 
-av_model_kenlm_nolexicon.txt 
-av_model_kenlm_lexicon.txt 
+## Project Structure
 
-
-Each output file will contain 
-
-a reference transcript, 
-predicted text, 
-final test loss, 
-WER,
-CER. 
-
-Epochs are printed in the terminal. 
-
-You can run python3 whisper_eval.py -> whisper.txt and it can be used as a baseline. 
-
-
-
-
+```text
+.
+├── main.py
+├── train.py
+├── dataset.py
+├── sample.py
+├── AudioModel.py
+├── whisper_eval.py                  # optional Whisper evaluation
+├── lexicon.txt                      # optional
+├── kenlm.bin                        # optional
+├── best_audio_model.pt              # generated after training
+├── best_av_model.pt                 # generated after training
+├── audio_model_greedy.txt
+├── audio_model_beam.txt
+├── audio_model_kenlm_nolexicon.txt
+├── audio_model_kenlm_lexicon.txt
+├── av_model_greedy.txt
+├── av_model_beam.txt
+├── av_model_kenlm_nolexicon.txt
+└── av_model_kenlm_lexicon.txt
