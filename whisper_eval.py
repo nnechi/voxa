@@ -10,6 +10,8 @@ from dataset import normalize
 TEST_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/test"
 FILE_PATH = "whisper.txt"
 
+"""@function 
+    use whisper as baseline on test set. call from this file. """
 def eval(model_name = "base.en"): 
     device = "cuda" if torch.cuda.is_available() else "cpu"; 
     model = whisper.load_model(model_name, device=device); 

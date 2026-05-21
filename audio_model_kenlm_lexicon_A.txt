@@ -2783,7 +2783,7 @@ Transcript: they were in the minority
 Predicted Text: they were in the minority
 
 Transcript: 500 tons of ocean liner
-Predicted Text: is of voteonline
+Predicted Text: its of ationline
 
 Transcript: one of the articles here is about the queen elizabeth
 Predicted Text: on the atease here is about the queen alesbus

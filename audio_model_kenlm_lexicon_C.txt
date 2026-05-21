@@ -884,7 +884,7 @@ Transcript: we have run out of time
 Predicted Text: we have run out of time
 
 Transcript: louise and kevin
-Predicted Text: as a keen
+Predicted Text: as a came
 
 Transcript: now they are gathering
 Predicted Text: nowthey are gary
@@ -3727,4 +3727,4 @@ Predicted Text: you know most
 
 Test Loss: 0.8193
 Test WER: 0.4364
-Test CER: 0.2499
+Test CER: 0.2500

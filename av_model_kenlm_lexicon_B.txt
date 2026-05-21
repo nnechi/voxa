@@ -2336,7 +2336,7 @@ Transcript: thanks for watching
 Predicted Text: thanks for watching
 
 Transcript: if you can have sex
-Predicted Text: ifyou king have
+Predicted Text: if you king have
 
 Transcript: tickets for the match
 Predicted Text: take as for the much
@@ -3726,5 +3726,5 @@ Predicted Text: you know mostofit
 
 
 Test Loss: 0.8496
-Test WER: 0.4209
+Test WER: 0.4206
 Test CER: 0.2207

@@ -3380,7 +3380,7 @@ Transcript: and it's a beautiful place as well
 Predicted Text: andit to be youtoa place
 
 Transcript: doesn't mean to say that we get on with everybody
-Predicted Text: don't mean tosay we get on we everybody
+Predicted Text: don't mean dose we get on we everybody
 
 Transcript: from time to time
 Predicted Text: from time to time
@@ -3727,4 +3727,4 @@ Predicted Text: you now mostofit
 
 Test Loss: 0.8496
 Test WER: 0.4296
-Test CER: 0.2139
+Test CER: 0.2140

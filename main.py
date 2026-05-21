@@ -10,10 +10,10 @@ from train import train_one_epoch, val_one_epoch, test_one_epoch, train_one_epoc
 from torchaudio.models.decoder import ctc_decoder
 
 
-TRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/train"
-PRETRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/pretrain"
-VAL_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/val"
-TEST_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Project/test"
+TRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Data/train"
+PRETRAIN_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Data/pretrain"
+VAL_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Data/val"
+TEST_PATH = r"/mnt/c/Users/nnechi/Documents/Code/Data/test"
 
 
 """@function 

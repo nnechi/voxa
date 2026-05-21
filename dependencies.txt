@@ -1,6 +1,0 @@
-torch
-torchaudio
-numpy
-opencv-python-headless
-torchmetrics
-flashlight-text

@@ -142,8 +142,9 @@ class LRS2Dataset(Dataset):
             captured_frames.release() 
             return torch.zeros(num_frames, 3, self.frame_height, self.frame_width); 
 
+        #choose the video frames to sample. 
         frame_indices = np.linspace(0, total_frames-1, num=num_frames, dtype=int); 
-        target_set = set(frame_indices.tolist()); 
+        target_set = set(frame_indices.tolist()); #all target indices to grab.
 
 
         frames = []; 
@@ -155,21 +156,21 @@ class LRS2Dataset(Dataset):
             ret, frame = captured_frames.read() 
 
             if not ret: 
-                break; 
+                break; #no more frames to process
 
-            if current_index in target_set: 
+            if current_index in target_set: #keep only sample frames
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB); 
                 frame = cv2.resize(frame,(self.frame_width, self.frame_height)); 
                 frame = frame.astype(np.float32)/255.0; 
                 frame = torch.from_numpy(frame).permute(2,0,1); 
-                frames.append(frame); 
+                frames.append(frame); #append as a tensor. 
 
 
             current_index+=1; 
 
         captured_frames.release(); 
 
-        while (len(frames) < num_frames): 
+        while (len(frames) < num_frames): #every sample should have the same amt of frames. 
             frames.append(torch.zeros(3, self.frame_height, self.frame_width)); 
         
         frames = frames[:num_frames]; 
